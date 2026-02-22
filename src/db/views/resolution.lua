@@ -57,7 +57,7 @@ FROM spec_relation_types rt;
 -- Pre-resolves relation targets using scoped and global lookups.
 -- Priority: 1) Float in same parent object, 2) Global float, 3) Object by PID
 --
--- Used by: relation_resolver handler (bulk UPDATE from this view)
+-- Used by: relation_analyzer handler (type-driven resolution)
 --------------------------------------------------------------------------------
 CREATE VIEW IF NOT EXISTS view_resolved_relations AS
 SELECT

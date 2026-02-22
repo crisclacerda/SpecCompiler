@@ -24,8 +24,6 @@ M.object = {
     }
 }
 
-M.handler = spec_object_base.create_handler("tr_handler", {
-    show_pid = false,
-})
+M.handler = spec_object_base.create_handler("tr_handler")
 
 return M

@@ -19,8 +19,6 @@ M.object = {
     }
 }
 
-M.handler = spec_object_base.create_handler("csc_handler", {
-    show_pid = false,
-})
+M.handler = spec_object_base.create_handler("csc_handler")
 
 return M

@@ -207,43 +207,52 @@ M.unified_by_label_global = [[
 -- STALE REFERENCE CLEANUP (incremental builds)
 -- ============================================================================
 
--- Null out target_object_id for relations pointing to deleted objects.
+-- Null out target_object_id (and type_ref) for relations pointing to deleted objects.
 -- Needed when cached documents have cross-doc references to reprocessed docs
 -- whose objects were re-created with new auto-increment IDs.
+-- Also nulls type_ref so stale cached relations get re-analyzed.
 M.null_dangling_object_targets = [[
-    UPDATE spec_relations SET target_object_id = NULL
+    UPDATE spec_relations SET target_object_id = NULL, type_ref = NULL
     WHERE target_object_id IS NOT NULL
       AND NOT EXISTS (SELECT 1 FROM spec_objects WHERE id = spec_relations.target_object_id)
 ]]
 
--- Null out target_float_id for relations pointing to deleted floats.
+-- Null out target_float_id (and type_ref) for relations pointing to deleted floats.
 M.null_dangling_float_targets = [[
-    UPDATE spec_relations SET target_float_id = NULL
+    UPDATE spec_relations SET target_float_id = NULL, type_ref = NULL
     WHERE target_float_id IS NOT NULL
       AND NOT EXISTS (SELECT 1 FROM spec_floats WHERE id = spec_relations.target_float_id)
 ]]
 
--- Find specs with unresolved relations (for re-resolution after stale cleanup).
+-- Find specs with unresolved relations (for re-analysis after stale cleanup).
+-- No selector filter — any relation needing analysis is included.
 M.specs_with_unresolved_relations = [[
     SELECT DISTINCT specification_ref
     FROM spec_relations
     WHERE target_object_id IS NULL
       AND target_float_id IS NULL
-      AND link_selector IN ('@', '#')
+      AND type_ref IS NULL
+      AND target_text IS NOT NULL
 ]]
 
 -- ============================================================================
 -- RELATION RESOLUTION
 -- ============================================================================
 
--- Get unresolved relations eligible for standard resolution (@ and # selectors only)
-M.unresolved_relations_standard = [[
-    SELECT r.id, r.target_text, r.source_object_id, r.type_ref, r.link_selector
+-- Get unresolved relations eligible for type-driven analysis.
+-- No selector filter — any untyped relation with target_text is eligible.
+-- The relation_analyzer determines resolution strategy from candidate types.
+M.unresolved_relations_for_analysis = [[
+    SELECT r.id, r.source_object_id, r.target_text, r.from_file,
+           r.link_line, r.link_selector, r.source_attribute,
+           r.specification_ref, so.type_ref AS source_type
     FROM spec_relations r
-    WHERE r.specification_ref = :spec
+    LEFT JOIN spec_objects so ON so.id = r.source_object_id
+    WHERE r.specification_ref = :spec_id
       AND r.target_object_id IS NULL
       AND r.target_float_id IS NULL
-      AND r.link_selector IN ('@', '#')
+      AND r.type_ref IS NULL
+      AND r.target_text IS NOT NULL
 ]]
 
 -- Get unresolved relations (both target columns NULL)
@@ -364,24 +373,8 @@ M.select_attributes_with_ast_by_spec = [[
 ]]
 
 -- ============================================================================
--- RELATION TYPE INFERENCE
+-- RELATION TYPE INFERENCE (used by relation_analyzer)
 -- ============================================================================
-
--- Get all untyped relations with source/target type info for inference.
--- Joins source object, target float, and target object to determine types.
-M.select_untyped_relations_for_inference = [[
-    SELECT r.id, r.source_object_id, r.source_attribute,
-           r.target_object_id, r.target_float_id,
-           r.link_selector, r.target_text,
-           r.from_file, r.link_line,
-           so.type_ref AS source_type,
-           COALESCE(tf.type_ref, to2.type_ref) AS target_type
-    FROM spec_relations r
-    LEFT JOIN spec_objects so ON so.id = r.source_object_id
-    LEFT JOIN spec_floats tf ON tf.id = r.target_float_id
-    LEFT JOIN spec_objects to2 ON to2.id = r.target_object_id
-    WHERE r.specification_ref = :spec_id AND r.type_ref IS NULL
-]]
 
 -- Update relation with inferred type
 M.update_relation_type = [[

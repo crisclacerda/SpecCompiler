@@ -161,7 +161,7 @@ function M.run_project(project_info)
     require("pipeline.initialize.spec_floats").clear_cache()
     require("pipeline.initialize.spec_views").clear_cache()
     require("pipeline.initialize.spec_relations").clear_cache()
-    require("pipeline.analyze.relation_type_inferrer").clear_cache()
+    require("pipeline.analyze.relation_analyzer").clear_cache()
     require("pipeline.transform.view_materializer").clear_cache()
 
     -- Configure logger from project.yaml settings (with env var override)
@@ -251,14 +251,11 @@ function M.run_project(project_info)
     pipeline:register_handler(require("pipeline.initialize.spec_views"))
     pipeline:register_handler(require("pipeline.initialize.attributes"))
 
-    -- Register PID generator (ANALYZE phase, runs before relation_resolver)
+    -- Register PID generator (ANALYZE phase, runs before relation_analyzer)
     pipeline:register_handler(require("pipeline.analyze.pid_generator"))
 
-    -- Register relation resolver (ANALYZE phase)
-    pipeline:register_handler(require("pipeline.analyze.relation_resolver"))
-
-    -- Register relation type inferrer (ANALYZE phase, runs after relation_resolver)
-    pipeline:register_handler(require("pipeline.analyze.relation_type_inferrer"))
+    -- Register relation analyzer (ANALYZE phase, type-driven resolution + inference)
+    pipeline:register_handler(require("pipeline.analyze.relation_analyzer"))
 
     -- Register verify handler (VERIFY phase)
     pipeline:register_handler(require("pipeline.verify.verify_handler"))

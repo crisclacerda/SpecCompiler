@@ -17,7 +17,7 @@ LEFT JOIN spec_objects so ON r.source_object_id = so.id
 WHERE r.is_ambiguous = 1;
 ]],
     message = function(row)
-        return string.format("Ambiguous float reference '%s' - multiple matches found, using first", row.target_text)
+        return string.format("Ambiguous relation '%s' — multiple targets or inference rules matched", row.target_text)
     end
 }
 

@@ -1,4 +1,6 @@
 -- Test oracle for VC-REL-004: Scoped resolution and header/PID normalization.
+-- Floats are resolved to full anchors ({parent-pid}-{type-prefix}-{user-label})
+-- with numbered display text (e.g., "Figure 1").
 
 return function(actual_doc, helpers)
     helpers.strip_tracking_spans(actual_doc)
@@ -24,11 +26,11 @@ return function(actual_doc, helpers)
         err("Expected at least 4 resolved links, found " .. tostring(#link_targets))
     end
 
-    if (target_counts["#shared-label"] or 0) < 1 then
-        err("Expected one local figure reference to target #shared-label")
+    if (target_counts["#SRC-001-fig-shared-label"] or 0) < 1 then
+        err("Expected resolved figure reference to target #SRC-001-fig-shared-label")
     end
-    if (target_counts["#shared-label-two"] or 0) < 1 then
-        err("Expected one local figure reference to target #shared-label-two")
+    if (target_counts["#SRC-002-fig-shared-label-two"] or 0) < 1 then
+        err("Expected resolved figure reference to target #SRC-002-fig-shared-label-two")
     end
     if (target_counts["#SRC-002"] or 0) < 1 then
         err("Expected resolved PID target #SRC-002 from [@SRC-002](@)")

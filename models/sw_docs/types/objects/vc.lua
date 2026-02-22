@@ -24,7 +24,6 @@ M.object = {
 }
 
 M.handler = spec_object_base.create_handler("vc_handler", {
-    show_pid = false,
     -- attr_order controls display sequence; unlisted attrs (approach, traceability) append alphabetically after status
     attr_order = {
         "objective",

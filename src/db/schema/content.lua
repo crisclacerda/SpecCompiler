@@ -250,12 +250,12 @@ CREATE TABLE IF NOT EXISTS spec_relations (
 
   -- Resolved target: spec_object (NULL if target is a float or unresolved)
   -- FK to spec_objects.id
-  -- Populated during ANALYZE phase by relation_resolver
+  -- Populated during ANALYZE phase by relation_analyzer
   target_object_id INTEGER,
 
   -- Resolved target: spec_float (NULL if target is an object or unresolved)
   -- FK to spec_floats.id
-  -- Populated during ANALYZE phase by relation_resolver
+  -- Populated during ANALYZE phase by relation_analyzer
   target_float_id INTEGER,
 
   -- Relation type (TRACES_TO, VERIFIES, SATISFIES, CITES, etc.)
@@ -534,9 +534,9 @@ CREATE INDEX IF NOT EXISTS idx_spec_relations_target_obj
 CREATE INDEX IF NOT EXISTS idx_spec_relations_target_flt
     ON spec_relations(target_float_id);
 
--- Unresolved relations: batch processing in relation resolver (hot path)
+-- Unresolved relations: batch processing in relation analyzer (hot path)
 -- Serves: WHERE specification_ref = ? AND target_object_id IS NULL
---           AND target_float_id IS NULL AND link_selector IN ('@','#')
+--           AND target_float_id IS NULL AND type_ref IS NULL
 CREATE INDEX IF NOT EXISTS idx_spec_relations_unresolved
     ON spec_relations(specification_ref, link_selector)
     WHERE target_object_id IS NULL AND target_float_id IS NULL;

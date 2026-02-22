@@ -20,8 +20,6 @@ M.object = {
     }
 }
 
-M.handler = spec_object_base.create_handler("nfr_handler", {
-    show_pid = false,
-})
+M.handler = spec_object_base.create_handler("nfr_handler")
 
 return M

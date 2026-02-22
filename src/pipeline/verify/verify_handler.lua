@@ -4,7 +4,7 @@
 
 local M = {
     name = "verify",
-    prerequisites = {"relation_resolver"}
+    prerequisites = {"relation_analyzer"}
 }
 
 local ProofLoader = require("core.proof_loader")

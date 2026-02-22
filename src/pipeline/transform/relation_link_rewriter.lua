@@ -152,7 +152,7 @@ local function rewrite_links_in_ir(data, spec_id, relation_lookup)
                         local target = link.target or ""
                         local content_text = pandoc.utils.stringify(link.content)
 
-                        if target == "@" or target == "#" then
+                        if target:match("^[@#]") then
                             -- Look up by (source_object_id, selector, target_text)
                             local key = tostring(obj.id) .. "|" .. target .. "|" .. content_text
                             local resolved = relation_lookup[key]
@@ -162,17 +162,20 @@ local function rewrite_links_in_ir(data, spec_id, relation_lookup)
                                 if resolved.display_text then
                                     link.content = { pandoc.Str(resolved.display_text) }
                                 end
-                            else
-                                -- Fallback for unresolved links
+                                modified = true
+                                return link
+                            elseif target == "@" or target == "#" then
+                                -- Fallback only for base selectors;
+                                -- extended selectors left for type-specific handlers
                                 if target == "#" then
                                     local label = content_text:match(":(.+)$") or content_text
                                     link.target = "#" .. label
                                 else
                                     link.target = "#" .. content_text
                                 end
+                                modified = true
+                                return link
                             end
-                            modified = true
-                            return link
                         end
 
                         return link
@@ -217,7 +220,7 @@ local function rewrite_links_in_attribute_ast(data, spec_id, relation_lookup)
                         local target = link.target or ""
                         local content_text = pandoc.utils.stringify(link.content)
 
-                        if target == "@" or target == "#" then
+                        if target:match("^[@#]") then
                             -- owner_object_id is the source for attribute links
                             local key = tostring(attr.owner_object_id) .. "|" .. target .. "|" .. content_text
                             local resolved = relation_lookup[key]
@@ -227,16 +230,20 @@ local function rewrite_links_in_attribute_ast(data, spec_id, relation_lookup)
                                 if resolved.display_text then
                                     link.content = { pandoc.Str(resolved.display_text) }
                                 end
-                            else
+                                modified = true
+                                return link
+                            elseif target == "@" or target == "#" then
+                                -- Fallback only for base selectors;
+                                -- extended selectors left for type-specific handlers
                                 if target == "#" then
                                     local label = content_text:match(":(.+)$") or content_text
                                     link.target = "#" .. label
                                 else
                                     link.target = "#" .. content_text
                                 end
+                                modified = true
+                                return link
                             end
-                            modified = true
-                            return link
                         end
 
                         return link
@@ -255,7 +262,7 @@ local function rewrite_links_in_attribute_ast(data, spec_id, relation_lookup)
 end
 
 ---Rewrite links in stored AST using resolved anchors.
----Resolution is handled by relation_resolver in ANALYZE phase.
+---Resolution is handled by relation_analyzer in ANALYZE phase.
 function M.on_transform(data, contexts, diagnostics)
     data:begin_transaction()
     for _, ctx in ipairs(contexts) do

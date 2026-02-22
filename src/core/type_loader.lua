@@ -314,10 +314,8 @@ end
 function M.register_module(data, module)
     -- Priority 0: Base relation types (have both M.relation and M.resolve)
     if module.relation and module.resolve then
-        -- Register resolver on data manager (scoped per build)
-        if module.relation.link_selector then
-            data:register_resolver(module.relation.link_selector, module.resolve)
-        end
+        -- Register resolver by type identifier (type-driven resolution)
+        data:register_resolver(module.relation.id, module.resolve)
         -- Also register as a relation type in DB (so children can extend it)
         register_relation_type(data, module.relation)
         register_attributes(data, module.relation)

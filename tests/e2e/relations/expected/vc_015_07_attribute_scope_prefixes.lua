@@ -30,8 +30,8 @@ return function(actual_doc, helpers)
     if (link_targets["#figure:shared-b"] or 0) < 1 then
         err("Expected scoped figure reference target #figure:shared-b from attribute link")
     end
-    if (link_targets["#shared-a"] or 0) < 1 then
-        err("Expected direct figure reference target #shared-a")
+    if (link_targets["#SRC-A-fig-shared-a"] or 0) < 1 then
+        err("Expected resolved figure reference target #SRC-A-fig-shared-a")
     end
     if (link_targets["#bar"] or 0) < 1 then
         err("Expected unknown-prefix fallback target #bar")

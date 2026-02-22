@@ -1,6 +1,6 @@
 ---PID Auto-Generator for SpecCompiler.
 ---ANALYZE phase handler that generates PIDs for objects without explicit @PID.
----Runs BEFORE relation_resolver so PIDs are available for resolution.
+---Runs BEFORE relation_analyzer so PIDs are available for resolution.
 ---
 ---Detects sibling patterns (prefix, format, max_seq) from explicit PIDs,
 ---then generates sequential PIDs for objects with pid IS NULL.
@@ -14,7 +14,7 @@ local Queries = require("db.queries")
 
 local M = {
     name = "pid_generator",
-    prerequisites = {}  -- Runs first in ANALYZE (before relation_resolver)
+    prerequisites = {}  -- Runs first in ANALYZE (before relation_analyzer)
 }
 
 ---Auto-generate PIDs for specifications without explicit @PID.

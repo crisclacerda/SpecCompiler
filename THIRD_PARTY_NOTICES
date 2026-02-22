@@ -1,10 +1,8 @@
 # Third-Party Notices
 
-SpecCompiler Core (Apache-2.0) includes, bundles, and/or invokes third-party
-software.  Each component remains under its original license terms.
+SpecCompiler Core includes, bundles, and/or invokes third-party software.
 
-
-### A.1 — Lua Runtime
+### Lua Runtime
 
 | Component | Version | Source | License |
 |-----------|---------|--------|---------|
@@ -19,7 +17,7 @@ software.  Each component remains under its original license terms.
 | pure\_lua\_SHA (sha2.lua) | 6adac177c16c | https://github.com/Egor-Skriptunoff/pure_lua_SHA | MIT |
 | SLAXML | v0.8 | https://github.com/Phrogz/SLAXML | MIT |
 
-### B.1 — Deno Runtime
+### Deno Runtime
 
 | Component | Version | Source | License |
 |-----------|---------|--------|---------|
@@ -32,12 +30,20 @@ software.  Each component remains under its original license terms.
 | mathml2omml | 0.5.0 | https://github.com/niclasfr/mathml2omml | **LGPL-3.0-or-later** |
 | tslib | 2.3.0 | https://github.com/Microsoft/tslib | 0BSD |
 
+### Python 3 Runtime
+
+| Component | Version | Source | License |
+|-----------|---------|--------|---------|
+| CPython | 3.11.x (Debian Bookworm) | https://www.python.org | PSF-2.0 |
+| reqif | 0.0.48 | https://github.com/strictdoc-project/reqif | Apache-2.0 |
+
 ### Tools
 
 | Component | Version | Source | License | 
 |-----------|---------|--------|---------|
 | Pandoc CLI | 3.6.1 | https://github.com/jgm/pandoc | **GPL-2.0-or-later** |
 | PlantUML | 1.2024.8 | https://github.com/plantuml/plantuml | **GPL-3.0-or-later** |
+
 
 | Runtime Dependency | Source | License |
 |--------------------|--------|---------|
@@ -48,11 +54,3 @@ software.  Each component remains under its original license terms.
 | Component | Version | Source | License | Purpose |
 |-----------|---------|--------|---------|---------|
 | luacov | 0.15.0 | https://github.com/keplerproject/luacov | MIT | Test coverage |
-
-
-## Notes
-
-- All version pins are defined in [`scripts/versions.env`](scripts/versions.env).
-- Build logic is in [`scripts/build_vendor.sh`](scripts/build_vendor.sh).
-- Where available, upstream LICENSE files are preserved in vendored paths.
-- This file is informational and not a substitute for upstream license texts.

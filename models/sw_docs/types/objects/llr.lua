@@ -17,8 +17,6 @@ M.object = {
     }
 }
 
-M.handler = spec_object_base.create_handler("llr_handler", {
-    show_pid = false,
-})
+M.handler = spec_object_base.create_handler("llr_handler")
 
 return M

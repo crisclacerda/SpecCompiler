@@ -16,19 +16,20 @@ function M.new(db_handler, log)
     return self
 end
 
----Register a link-selector resolver function.
+---Register a resolver function for a base relation type.
 ---Called by type_loader when loading base relation types (e.g. PID_REF, LABEL_REF).
----@param selector string Link selector ("@", "#", etc.)
+---Resolution is type-driven: the type's extends chain determines which resolver to use.
+---@param type_id string Base relation type identifier ("PID_REF", "LABEL_REF", etc.)
 ---@param fn function Resolver function(data, spec_id, target_text, source_object_id)
-function M:register_resolver(selector, fn)
-    self._resolvers[selector] = fn
+function M:register_resolver(type_id, fn)
+    self._resolvers[type_id] = fn
 end
 
----Get the resolver function for a link selector.
----@param selector string|nil Link selector
+---Get the resolver function for a base relation type.
+---@param type_id string|nil Base relation type identifier
 ---@return function|nil resolver
-function M:get_resolver(selector)
-    return selector and self._resolvers[selector] or nil
+function M:get_resolver(type_id)
+    return type_id and self._resolvers[type_id] or nil
 end
 
 function M:query_all(sql, params)
