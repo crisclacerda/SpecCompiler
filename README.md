@@ -34,8 +34,6 @@ The fundamental purpose of SpecCompiler is to prevent the occurrence of *finding
 
 By imposing a ReqIF-inspired Type System (Γ) on Markdown SpecCompiler guarantees referential and schema integrity: detecting invalid object kinds, missing mandatory attributes and traceability gaps at **compile time**.
 
-SpecCompiler was designed for regulated and safety-critical environments where structural traceability is mandatory.
-
 ## Output
 
 **DOCX (Print & Collaboration):** Maps types directly to DOCX style presets and supports direct OOXML transformations. Generate branded corporate templates or strict academic formats (ABNT NBR 14724:2011).
