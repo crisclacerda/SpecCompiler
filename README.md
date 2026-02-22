@@ -1,7 +1,5 @@
-<h3 align="center">SpecCompiler is the reference implementation of SpecIR, a relational intermediate representation for textual specifications.</em></p>
+<h3 align="center">SpecCompiler is the reference implementation of SpecIR - a relational intermediate representation for textual specifications.</em></p>
 <p align="center">
-  <a href="https://github.com/specIR/SpecCompiler/actions/workflows/docker-publish.yml"><img src="https://github.com/specIR/SpecCompiler/actions/workflows/docker-publish.yml/badge.svg" alt="Build"></a>
-  <a href="https://github.com/specIR/SpecCompiler/releases/latest"><img src="https://img.shields.io/github/v/release/specIR/SpecCompiler" alt="Release"></a>
   <a href="https://github.com/specIR/SpecCompiler/blob/main/LICENSE"><img src="https://img.shields.io/github/license/specIR/SpecCompiler" alt="License"></a>
   <img src="https://img.shields.io/badge/status-alpha-orange" alt="Status: Alpha">
 </p>

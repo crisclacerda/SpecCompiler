@@ -41,12 +41,21 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check if toolchain image exists in registry
+        id: image-exists
+        run: |
+          if docker manifest inspect ${{ env.TOOLCHAIN_IMAGE }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Docker Buildx
-        if: steps.check.outputs.changed == 'true'
+        if: steps.check.outputs.changed == 'true' || steps.image-exists.outputs.exists == 'false'
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
-        if: steps.check.outputs.changed == 'true' && github.event_name != 'pull_request'
+        if: (steps.check.outputs.changed == 'true' || steps.image-exists.outputs.exists == 'false') && github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -54,7 +63,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push toolchain
-        if: steps.check.outputs.changed == 'true' && github.event_name != 'pull_request'
+        if: (steps.check.outputs.changed == 'true' || steps.image-exists.outputs.exists == 'false') && github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
         with:
           context: .
