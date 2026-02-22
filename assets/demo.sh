@@ -17,7 +17,7 @@ CAST="$SCRIPT_DIR/demo.cast"
 GIF="$SCRIPT_DIR/demo.gif"
 DEMO_DIR="/tmp/specc-demo-rec"
 SESSION="specc-demo"
-COLS=90
+COLS=120
 ROWS=26
 
 # ── helpers ────────────────────────────────────────────────

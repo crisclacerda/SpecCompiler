@@ -67,7 +67,9 @@ specc build docs/engineering_docs/project.yaml
 specc build docs/user_docs/project.yaml 
 ```
 
-Have fun exploring it.
+`docs/user_docs/` contains user-facing documentation (installation, authoring syntax, configuration) serving as an example of the default type system applied to general technical publishing.
+
+`docs/engineering_docs/` contains a self-hosted engineering document set (SRS/SDD/SVC) illustrating how the system can be applied in regulated and safety-critical software.
 
 ## Documentation
 
