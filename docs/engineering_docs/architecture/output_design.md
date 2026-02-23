@@ -250,3 +250,19 @@ Selected Deno as the runtime for TypeScript-based external tools.
 > - Cross-platform compatibility
 >
 > Tools are spawned via `task_runner.spawn_sync()` with timeout handling.
+
+---
+
+### DD: Pandoc as Document Processing Engine @DD-CORE-005
+
+Selected Pandoc as the document parsing and output generation engine.
+
+> rationale: Pandoc serves as both input parser and output generator:
+>
+> - CommonMark+extensions parsing via `pandoc.read()` provides a well-defined AST
+> - Lua filter API enables in-process AST manipulation without subprocess overhead for parsing
+> - Multi-format output (DOCX, HTML5, Markdown, LaTeX/PDF, JSON) from a single intermediate representation
+> - `--reference-doc` support enables DOCX style customization via generated reference.docx
+> - `--lua-filter` support enables format-specific transformations (docx.lua, html.lua)
+> - Native bibliography support (--bibliography, --csl) for citation processing
+> - Broad ecosystem adoption provides stability and community support

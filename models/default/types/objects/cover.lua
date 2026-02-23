@@ -104,6 +104,9 @@ function M.on_render_SpecObject(obj, ctx)
     -- 6. Date
     -- 7. Version / Document ID at bottom
 
+    -- Mark cover section start so output filters can strip/keep as a unit
+    table.insert(blocks, pandoc.RawBlock("speccompiler", "cover-section-start"))
+
     table.insert(blocks, vertical_space(2880))  -- ~2 inches
 
     table.insert(blocks, semantic_div(title, "cover-title"))
@@ -134,6 +137,9 @@ function M.on_render_SpecObject(obj, ctx)
 
     -- Page break after cover
     render_utils.add_page_break(blocks, "next")
+
+    -- Mark cover section end
+    table.insert(blocks, pandoc.RawBlock("speccompiler", "cover-section-end"))
 
     return blocks
 end

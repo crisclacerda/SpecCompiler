@@ -12,14 +12,21 @@ The Specification [TERM-IR](@) (SPEC-IR) is implemented as a [TERM-SQLITE](@) sc
 
 The schema has four domains:
 
-| Domain | Tables |
-|---|---|
-| Type system | `spec_specification_types`, `spec_object_types`, `spec_float_types`, `spec_relation_types`, `spec_view_types`, `datatype_definitions`, `spec_attribute_types`, `enum_values`, `implicit_type_aliases`, `implicit_spec_type_aliases` |
-| Content | `specifications`, `spec_objects`, `spec_floats`, `spec_relations`, `spec_views`, `spec_attribute_values` |
-| Build cache | `build_graph`, `source_files`, `output_cache` |
-| Search (FTS5) | `fts_objects`, `fts_attributes`, `fts_floats` |
+```list-table:tbl-specir-domains{caption="Schema domains"}
+> header-rows: 1
+> aligns: l,l
 
-> Note: FTS5 creates shadow tables (`*_data`, `*_idx`, `*_docsize`, etc.) automatically; they are managed by SQLite internals.
+* - Domain
+  - Tables
+* - Type system
+  - `spec_specification_types`, `spec_object_types`, `spec_float_types`, `spec_relation_types`, `spec_view_types`, `datatype_definitions`, `spec_attribute_types`, `enum_values`, `implicit_type_aliases`, `implicit_spec_type_aliases`
+* - Content
+  - `specifications`, `spec_objects`, `spec_floats`, `spec_relations`, `spec_views`, `spec_attribute_values`
+* - Build cache
+  - `build_graph`, `source_files`, `output_cache`
+* - Search (FTS5)
+  - `fts_objects`, `fts_attributes`, `fts_floats`
+```
 
 ### ER-001: Type + Content
 
@@ -260,86 +267,3 @@ spec_relation_types }o--o| spec_object_types : target_type_ref
 
 @enduml
 ```
-
-### ER-002: Build + Search
-
-```plantuml:er-specir-build-search
-@startuml
-title SPEC-IR ER (Build Cache + Search)
-
-hide methods
-hide stereotypes
-skinparam linetype ortho
-
-entity "build_graph" as build_graph {
-  * root_path : TEXT
-  * node_path : TEXT
-  --
-  node_sha1 : TEXT
-}
-
-entity "source_files" as source_files {
-  * path : TEXT
-  --
-  sha1 : TEXT
-}
-
-entity "output_cache" as output_cache {
-  * spec_id : TEXT
-  * output_path : TEXT
-  --
-  pir_hash : TEXT
-  generated_at : TEXT
-}
-
-entity "fts_objects" as fts_objects <<FTS5>> {
-  identifier : TEXT (UNINDEXED)
-  object_type : TEXT (UNINDEXED)
-  spec_id : TEXT (UNINDEXED)
-  title : TEXT
-  content : TEXT
-  raw_source : TEXT
-}
-
-entity "fts_attributes" as fts_attributes <<FTS5>> {
-  owner_ref : TEXT (UNINDEXED)
-  spec_id : TEXT (UNINDEXED)
-  attr_name : TEXT (UNINDEXED)
-  attr_type : TEXT (UNINDEXED)
-  attr_value : TEXT
-}
-
-entity "fts_floats" as fts_floats <<FTS5>> {
-  identifier : TEXT (UNINDEXED)
-  float_type : TEXT (UNINDEXED)
-  spec_id : TEXT (UNINDEXED)
-  parent_ref : TEXT (UNINDEXED)
-  caption : TEXT
-  raw_source : TEXT
-}
-
-entity "specifications" as specifications {
-  * identifier : TEXT
-}
-
-entity "spec_objects" as spec_objects {
-  * id : INTEGER
-}
-
-entity "spec_floats" as spec_floats {
-  * id : INTEGER
-}
-
-specifications ||..o{ output_cache : spec_id
-spec_objects ||..o{ fts_objects : identifier
-spec_floats ||..o{ fts_floats : identifier
-spec_objects ||..o{ fts_attributes : owner_ref
-
-@enduml
-```
-
-### Notes
-
-- ReqIF cache columns (`spec_objects.content_xhtml`, `spec_attribute_values.xhtml_value`) are part of the main `src/db/schema/content.lua` schema.
-- `build_graph`, `source_files`, and `output_cache` support incremental builds and output invalidation.
-- FTS tables are populated for cross-document search and may be absent/empty until indexing runs.

@@ -20,7 +20,7 @@
     zip_utils.create("/path/to/source", "/path/to/output.zip")
 
   Dependencies:
-  - brimworks.zip (lua-zip) - installed via install.sh
+  - brimworks.zip (lua-zip) - installed via build.sh
   - luv - for directory traversal (bundled)
 
   @module zip_utils

@@ -331,13 +331,39 @@ end
 -- Pandoc expects an array of filter tables for the traversal
 -- ============================================================================
 
+-- State: tracks whether we are inside a cover section (to strip from HTML)
+local in_cover_section = false
+
 return {
-    -- Pass 1: Div containers must be processed first.
+    -- Pass 1: Div containers and cover-section markers.
     -- Equation and caption Divs inspect inner speccompiler RawBlocks;
     -- bottom-up traversal in a single pass would convert those RawBlocks
     -- before the Div handler sees them, breaking extraction.
+    -- Cover-section markers (RawBlocks) are also handled here so that
+    -- the state flag is set before cover Divs are visited.
     {
+        RawBlock = function(block)
+            if block.format == "speccompiler" then
+                if block.text == "cover-section-start" then
+                    in_cover_section = true
+                    return {}
+                elseif block.text == "cover-section-end" then
+                    in_cover_section = false
+                    return {}
+                end
+            end
+            -- Strip any RawBlock inside the cover section (spacers, page breaks)
+            if in_cover_section then
+                return {}
+            end
+            return block
+        end,
+
         Div = function(div)
+            -- Strip all Divs inside a cover section
+            if in_cover_section then
+                return {}
+            end
             if has_class(div, "speccompiler-caption") then
                 return convert_caption_div(div)
             elseif has_class(div, "speccompiler-numbered-equation") then

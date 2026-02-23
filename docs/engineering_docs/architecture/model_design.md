@@ -69,3 +69,92 @@ template-specific LaTeX fixups for PDF output.
 Preset) defines page layout (Letter, standard margins), heading styles, table formatting, and
 font selections for Word output. [csu:html-style-preset](#) (HTML Style Preset) defines the web typography
 (Inter/JetBrains Mono), color palette, and responsive layout for HTML output.
+
+```puml:fd-005-model{caption="Type System and Domain Model Definition"}
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+
+participant "CSU Build Engine" as E
+participant "CSU Type Loader" as TL
+participant "CSC-017 Default\nModel" as DM
+participant "CSC-018 Default\nFilters" as FL
+participant "CSC-019 Default\nPostprocessors" as PP
+participant "CSU Data Manager" as DB
+participant "CSU Pipeline" as PL
+
+== Type Loading ==
+E -> TL: load_model(data, pipeline, "default")
+activate TL
+
+TL -> DM: scan types/objects/
+DM --> TL: SECTION.lua
+TL -> DB: register_object_type(SECTION)
+
+TL -> DM: scan types/specifications/
+DM --> TL: spec.lua
+TL -> DB: register_specification_type(SPEC)
+
+TL -> DM: scan types/floats/
+DM --> TL: figure.lua, table.lua, listing.lua,\nplantuml.lua, chart.lua, math.lua
+loop for each float type
+    TL -> DB: register_float_type(M.float)
+    alt has M.handler
+        TL -> PL: register_handler(M.handler)
+        note right: e.g., plantuml, chart,\nmath external renderers
+    end
+end
+
+TL -> DM: scan types/relations/
+DM --> TL: xref_figure.lua, xref_table.lua, ...
+loop for each relation type
+    TL -> DB: register_relation_type(M.relation)
+end
+
+TL -> DM: scan types/views/
+DM --> TL: toc.lua, lof.lua, abbrev.lua, ...
+loop for each view type
+    TL -> DB: register_view_type(M.view)
+    alt has M.handler
+        TL -> PL: register_handler(M.handler)
+    end
+end
+
+TL -> DB: propagate_inherited_attributes()
+TL -> DB: propagate_inherited_relation_properties()
+TL --> E: types and handlers registered
+deactivate TL
+
+== Filter Application (during EMIT) ==
+E -> FL: load filters/{format}.lua
+note right: docx.lua, html.lua,\nmarkdown.lua
+FL --> E: filter functions
+E -> E: apply filter to Pandoc AST
+note right: Convert speccompiler markers\nto format-native elements
+
+== Postprocessor (after Pandoc) ==
+E -> PP: finalize(output_paths, config)
+note right: docx.lua: OOXML fixups\n(styles, tables, headings)\nhtml5.lua: bundle single-file\nweb app with embedded DB
+PP --> E: postprocessed outputs
+
+== Style Preset ==
+E -> DM: load styles/{preset}/preset.lua
+note right: DOCX: Letter, margins,\nfonts, heading styles\nHTML: Inter, JetBrains Mono
+E -> E: generate reference.docx
+@enduml
+```
+
+---
+
+### DD: Layered Model Extension with Override Semantics @DD-MODEL-001
+
+Selected layered model loading where domain models extend and override the default model by type identifier.
+
+> rationale: ID-based override enables clean domain specialization:
+>
+> - Default model loads first, establishing baseline types (SECTION, SPEC, float types, relations, views)
+> - Domain model loads second; types with matching IDs replace defaults, new IDs add to the registry
+> - Proof views follow the same pattern: domain proofs override defaults by `policy_key`
+> - Attribute inheritance propagated iteratively after all types are loaded, enabling parent attributes to flow to child types across model boundaries
+> - Filter, postprocessor, and style directories follow conventional naming for predictable discovery
+> - Alternative of mixin composition rejected: ordering ambiguity when multiple mixins define the same attribute

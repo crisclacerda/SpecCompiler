@@ -169,7 +169,7 @@ var SpecCompiler = SpecCompiler || {};
         '    <dt>ID</dt><dd>' + escapeHtml(String(specId || '')) + '</dd>',
         '  </dl>',
         '</div>',
-        '<div class="inspector-empty">Database not available. Run `bash scripts/build_vendor.sh --install` (or `bash scripts/docker_install.sh`) to build vendor dependencies for search/filters.</div>'
+        '<div class="inspector-empty">Database not available. Run `bash scripts/build.sh --install` (or `bash scripts/install.sh`) to build vendor dependencies for search/filters.</div>'
       ].join('');
       return;
     }

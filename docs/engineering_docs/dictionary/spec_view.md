@@ -1,23 +1,19 @@
-## DIC: Spec View @DIC-VW-001
+## Spec View @specIR-06
 
 A **Spec View** represents a dynamic query or generated content block. Views are materialized during the TRANSFORM phase and can generate tables of contents (TOC), lists of figures (LOF), or custom queries, abbreviations, and inline math. Views enable dynamic document assembly based on specification data.
 
-### Content Model
+### Declaration
 
-A **Spec View** is formally defined as a tuple `$: V = (tau, d)` where:
+A **Spec View** is formally defined as a pair `$: V = (tau, omega)` where:
 - `$: tau in Gamma . TT_V` is the view type (e.g., TOC, LOF, TRACEABILITY_MATRIX, ABBREV).
-- `$: d in "AST" uu {bot}` is the materialized content (`$: bot` before TRANSFORM; an AST fragment after materialization).
+- `$: omega` is a raw string passed as a parameter to the view handler.
 
-### Grammar
+### Syntax
 
-See [DIC-SYN-001](@) for the full syntax reference. The core production is:
-
-```plantuml:grammar-spec-view{caption="Spec View productions (inline)"}
+```plantuml:grammar-spec-view{caption="Spec View productions"}
 @startebnf
 
-InlineView = "`", TypeRef, ":", [ ViewParam ], "`";
+View = "`", TypeRef, ":", [ ViewParam ], "`";
 
 @endebnf
 ```
-
-> traceability: [HLR-TYPE-004](@)

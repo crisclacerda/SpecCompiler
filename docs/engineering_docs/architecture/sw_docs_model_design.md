@@ -86,3 +86,75 @@ FD. [csu:csu-missing-fd-allocation](#) (CSU Missing FD Allocation) ensures every
 [csc:sw-docs-model](#) (SW Docs Model) provides the domain postprocessor. [csu:html5-postprocessor](#) (HTML5
 Postprocessor) generates a single-file documentation web application with embedded CSS, JS,
 navigation, and SQLite-WASM full-text search from the Spec-IR database.
+
+```puml:fd-007-sw-docs{caption="Software Documentation Domain Model"}
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam sequenceMessageAlign center
+
+participant "CSU Build Engine" as E
+participant "CSU Type Loader" as TL
+participant "CSC-017 Default\nModel" as DEF
+participant "CSC-025 SW Docs\nModel" as SW
+participant "CSU Proof Loader" as PL
+participant "CSU Data Manager" as DB
+
+== Default Model Loading ==
+E -> TL: load_model(data, pipeline, "default")
+TL -> DEF: scan types/
+DEF --> TL: SECTION, SPEC, float types,\nrelation types, view types
+TL -> DB: register all default types
+TL -> DB: propagate_inherited_attributes()
+
+== SW Docs Model Loading ==
+E -> TL: load_model(data, pipeline, "sw_docs")
+activate TL
+
+TL -> SW: scan types/objects/
+SW --> TL: TRACEABLE, HLR, LLR, NFR,\nFD, SF, CSC, CSU, VC, TR, DD, DIC, SYMBOL
+loop for each object type
+    TL -> DB: register_object_type(M.object)
+    note right: extends chain\n(e.g., HLR extends TRACEABLE)
+end
+
+TL -> SW: scan types/relations/
+SW --> TL: REALIZES, BELONGS,\nTRACES_TO, XREF_DIC
+loop for each relation type
+    TL -> DB: register_relation_type(M.relation)
+end
+
+TL -> SW: scan types/specifications/
+SW --> TL: SRS, SDD, SVC, SUM, TRR
+loop for each specification type
+    TL -> DB: register_specification_type(M.specification)
+end
+
+TL -> SW: scan types/views/
+SW --> TL: TRACEABILITY_MATRIX,\nCOVERAGE_SUMMARY, ...
+loop for each view type
+    TL -> DB: register_view_type(M.view)
+end
+
+TL -> DB: propagate_inherited_attributes()
+note right: TRACEABLE.status propagated\nto HLR, LLR, FD, CSC, CSU, etc.
+TL -> DB: propagate_inherited_relation_properties()
+TL --> E: sw_docs types registered
+deactivate TL
+
+== Domain Proof Loading ==
+E -> PL: load_model("default")
+PL -> DB: create default proof views
+
+E -> PL: load_model("sw_docs")
+PL -> SW: scan proofs/
+SW --> PL: fd_missing_csc, fd_missing_csu,\ncsc_missing_fd, csu_missing_fd,\nhlr_missing_vc, vc_missing_hlr,\ntr_missing_vc
+loop for each domain proof
+    PL -> DB: CREATE VIEW {proof.view}
+    note right: Domain-specific\ntraceability constraints
+end
+
+== VERIFY Executes All Proofs ==
+E -> DB: SELECT * FROM default proofs\n+ sw_docs proofs
+DB --> E: violation rows
+@enduml
+```

@@ -308,7 +308,7 @@ local function build_wasm_section(wasm_js, wasm_base64)
 	  <script>
 		    // SQLite WASM not embedded - search requires building vendor dependencies.
 		    window.sqlite3InitModule = function() {
-		      return Promise.reject(new Error('SQLite WASM not available. Run scripts/build_vendor.sh --install (or scripts/docker_install.sh) to enable search.'));
+		      return Promise.reject(new Error('SQLite WASM not available. Run scripts/build.sh --install (or scripts/install.sh) to enable search.'));
 		    };
 		  </script>]]
 end

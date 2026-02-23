@@ -542,7 +542,7 @@ if [ "$INSTALL" = true ]; then
 set -e
 
 usage() {
-    echo "SpecCompiler - Requirements Engineering Language Compiler"
+    echo "SpecCompiler"
     echo ""
     echo "Usage: specc build [project.yaml]"
     echo ""

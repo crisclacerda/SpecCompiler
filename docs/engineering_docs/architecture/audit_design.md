@@ -122,13 +122,16 @@ references pointing to nonexistent objects, and [csu:relation-ambiguous](#) (Rel
 ambiguous float references. View proofs: [csu:view-materialization-failure](#) (View Materialization Failure) detects
 failed view computations.
 
-```puml:fd-006-audit{caption="Incremental Build and Hash Computation"}
+```puml:fd-006-audit{caption="Audit and Integrity: Build Caching and Verification"}
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam sequenceMessageAlign center
 
 participant "CSU Build Engine" as E
 participant "CSU Hash Utilities" as H
+participant "CSU Proof Loader" as PL
+participant "CSU Verify Handler" as VH
+participant "CSU Validation\nPolicy" as VP
 participant "CSU Data Manager" as DB
 
 == Document Hash Check ==
@@ -160,5 +163,41 @@ end
 == After Rebuild ==
 E -> DB: UPDATE source_files SET sha1
 E -> DB: UPDATE build_graph entries
+
+== Proof Loading ==
+E -> PL: load_model("default")
+PL -> PL: scan proofs/*.lua
+PL -> PL: register proofs by policy_key
+
+E -> PL: load_model(template)
+note right: Override/extend proofs\nby policy_key
+
+E -> PL: create_views(data)
+loop for each registered proof
+    PL -> DB: exec_sql(proof.sql)
+    note right: CREATE VIEW {proof.view}
+end
+
+== VERIFY Phase ==
+VH -> PL: get_proofs()
+PL --> VH: proof_registry[]
+
+loop for each proof view
+    VH -> DB: SELECT * FROM {proof.view}
+    DB --> VH: violation rows[]
+
+    loop for each violation
+        VH -> VP: get_level(proof.policy_key)
+        VP --> VH: severity
+
+        alt level == "error"
+            VH -> VH: diagnostics:error(violation)
+        else level == "warn"
+            VH -> VH: diagnostics:warn(violation)
+        end
+    end
+end
+
+VH -> VH: store verification_result\nin contexts
 @enduml
 ```

@@ -88,50 +88,132 @@ skinparam sequenceMessageAlign center
 
 participant "CSU Build Engine" as E
 participant "CSU Pipeline\nOrchestrator" as P
-participant "CSC Pipeline\nHandlers" as H
+participant "CSC-010 Initialize\nHandlers" as INIT
+participant "CSC-008 Analyze\nHandlers" as ANLZ
+participant "CSC-012 Transform\nHandlers" as XFRM
+participant "CSC-009 Emit\nHandlers" as EMIT_H
 participant "CSU Data Manager" as DB
 
 E -> P: execute(walkers)
 
 == INITIALIZE ==
 P -> P: topological_sort("initialize")
-loop for each handler in sorted order
-    P -> H: on_initialize(data, contexts, diagnostics)
-    H -> DB: INSERT spec entities
-end
+P -> INIT: specifications.on_initialize()
+INIT -> DB: INSERT specifications
+P -> INIT: spec_objects.on_initialize()
+INIT -> DB: INSERT spec_objects
+P -> INIT: spec_floats.on_initialize()
+INIT -> DB: INSERT spec_floats
+P -> INIT: attributes.on_initialize()
+INIT -> DB: INSERT spec_attribute_values
+P -> INIT: spec_relations.on_initialize()
+INIT -> DB: INSERT spec_relations
+P -> INIT: spec_views.on_initialize()
+INIT -> DB: INSERT spec_views
 
 == ANALYZE ==
 P -> P: topological_sort("analyze")
-loop for each handler in sorted order
-    P -> H: on_analyze(data, contexts, diagnostics)
-    H -> DB: UPDATE references
-end
+P -> ANLZ: pid_generator.on_analyze()
+ANLZ -> DB: UPDATE spec_objects SET pid
+P -> ANLZ: relation_analyzer.on_analyze()
+ANLZ -> DB: UPDATE spec_relations\n(resolve targets, infer types)
 
 == TRANSFORM ==
 P -> P: topological_sort("transform")
-loop for each handler in sorted order
-    P -> H: on_transform(data, contexts, diagnostics)
-    H -> DB: UPDATE rendered content
-end
+P -> XFRM: view_materializer.on_transform()
+XFRM -> DB: UPDATE spec_views.resolved_data
+P -> XFRM: spec_floats.on_transform()
+XFRM -> DB: UPDATE spec_floats.resolved_ast
+P -> XFRM: external_render_handler.on_transform()
+XFRM -> DB: UPDATE resolved_ast\n(subprocess results)
+P -> XFRM: float_numbering.on_transform()
+XFRM -> DB: UPDATE spec_floats SET number
+P -> XFRM: specification_render_handler.on_transform()
+XFRM -> DB: UPDATE specifications.header_ast
+P -> XFRM: spec_object_render_handler.on_transform()
+XFRM -> DB: UPDATE spec_objects.ast
+P -> XFRM: relation_link_rewriter.on_transform()
+XFRM -> DB: UPDATE spec_objects.ast\n(rewrite links)
 
 == VERIFY ==
 P -> P: topological_sort("verify")
-loop for each handler in sorted order
-    P -> H: on_verify(data, contexts, diagnostics)
-    H -> DB: SELECT FROM proof views
-end
+P -> DB: SELECT * FROM proof views
+DB --> P: violation rows
 
 alt errors exist
     P --> E: abort (skip EMIT)
-else
+else no errors
     == EMIT ==
-    loop for each handler in sorted order
-        P -> H: on_emit(data, contexts, diagnostics)
-        H -> DB: SELECT assembled content
-        H -> H: parallel pandoc output
-    end
+    P -> P: topological_sort("emit")
+    P -> EMIT_H: reqif_xhtml.on_emit()
+    EMIT_H -> DB: SELECT spec_objects, cache XHTML
+    P -> EMIT_H: fts_indexer.on_emit()
+    EMIT_H -> DB: INSERT INTO fts_objects,\nfts_attributes, fts_floats
+    P -> EMIT_H: emitter.on_emit()
+    EMIT_H -> DB: SELECT assembled content
+    EMIT_H -> EMIT_H: parallel pandoc output
 end
 
 P --> E: diagnostics
 @enduml
 ```
+
+---
+
+### DD: SQLite as Spec-IR Persistence Engine @DD-CORE-001
+
+Selected SQLite as the persistence engine for the Specification Intermediate Representation.
+
+> rationale: SQLite provides:
+>
+> - Zero-configuration embedded database requiring no server process
+> - Single-file database portable across platforms (specir.db)
+> - SQL-based query interface enabling declarative proof views and resolution logic
+> - ACID transactions for reliable incremental builds with cache coherency
+> - Built-in FTS5 for full-text search in the web application output
+> - Mature Lua binding (lsqlite3) available in the Pandoc ecosystem
+
+---
+
+### DD: EAV Attribute Storage Model @DD-CORE-002
+
+Selected Entity-Attribute-Value storage for dynamic object and float attributes.
+
+> rationale: The EAV model enables runtime schema extension through model definitions:
+>
+> - Object types declare custom attributes in Lua modules without DDL changes
+> - New models can add attributes by declaring them in type definitions
+> - Typed columns provide SQL-level type safety while preserving EAV flexibility
+> - Per-type pivot views (view_{type}_objects) generated dynamically from spec_attribute_types restore columnar access for queries
+> - Alternative of wide tables rejected: column set unknown at schema creation time since models load after initialization
+
+---
+
+### DD: Five-Phase Pipeline Architecture @DD-CORE-003
+
+Selected a five-phase sequential pipeline (INITIALIZE, ANALYZE, TRANSFORM, VERIFY, EMIT) for document processing.
+
+> rationale: Five phases separate concerns and enable verification before output:
+>
+> - INITIALIZE parses AST into normalized relational IR before any resolution
+> - ANALYZE resolves cross-references and infers types on the complete IR, not partial state
+> - TRANSFORM renders content and materializes views with all references resolved
+> - VERIFY runs proof views after TRANSFORM so it can check transform results (e.g., float render failures, view materialization)
+> - EMIT generates output only after verification passes, preventing invalid documents
+> - VERIFY-before-EMIT enables abort on error without wasting output generation time
+> - Phase ordering is fixed; handler ordering within each phase is controlled by topological sort
+
+---
+
+### DD: Topological Sort for Handler Ordering @DD-CORE-004
+
+Selected Kahn's algorithm with declarative prerequisite arrays for handler execution ordering within each pipeline phase.
+
+> rationale: Declarative prerequisites with topological sort enable:
+>
+> - Handlers declare `prerequisites = {"handler_a", "handler_b"}` rather than manual sequence numbers
+> - Only handlers implementing the current phase's hook participate in the sort
+> - Alphabetical tie-breaking at equal dependency depth guarantees deterministic execution across runs
+> - Cycle detection with error reporting prevents invalid configurations
+> - New handlers (including model-provided handlers) integrate by declaring their prerequisites without modifying existing handlers
+> - Alternative of priority numbers rejected: fragile when inserting new handlers between existing priorities

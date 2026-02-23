@@ -157,6 +157,9 @@ function M.extract_metadata(meta)
         docx_config = {
             reference_doc = meta.docx.reference_doc and utils.stringify(meta.docx.reference_doc) or nil,
             preset = preset,
+            table_of_contents = meta.docx.table_of_contents,
+            toc_depth = meta.docx.toc_depth and tonumber(utils.stringify(meta.docx.toc_depth)) or nil,
+            number_sections = meta.docx.number_sections,
         }
     elseif preset then
         -- Create docx_config with just preset if style is specified at top level

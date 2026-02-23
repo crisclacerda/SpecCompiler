@@ -46,7 +46,7 @@ end
 
 ---Build a w:lvl element from a level definition table.
 ---@param level table Level config: { ilvl, start, num_fmt, lvl_text, lvl_jc,
----                    indent, suffix, restart_level }
+---                    indent, suffix, restart_level, pstyle }
 ---@return table XML element node for w:lvl
 local function build_level(level)
     local children = {}
@@ -60,6 +60,13 @@ local function build_level(level)
     table.insert(children, xml.node("w:numFmt", {
         ["w:val"] = level.num_fmt or "decimal"
     }))
+
+    -- w:pStyle (links this level to a paragraph style, so Word auto-numbers)
+    if level.pstyle then
+        table.insert(children, xml.node("w:pStyle", {
+            ["w:val"] = level.pstyle
+        }))
+    end
 
     -- w:lvlRestart (optional, only when restarting on a higher level change)
     if level.restart_level then

@@ -1,4 +1,4 @@
-# Build output (created by build_vendor.sh) — binaries, vendor libs, JRE
+# Build output (created by build.sh) — binaries, vendor libs, JRE
 dist/
 
 # Legacy locations (in case of leftover artifacts)

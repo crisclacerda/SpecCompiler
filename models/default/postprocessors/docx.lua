@@ -445,13 +445,48 @@ function M.postprocess(docx_path, template_name, log, config)
         write_xml(styles_xml_path, styles_content)
     end
 
-    -- Process numbering.xml (optional)
+    -- Process numbering.xml (create skeleton if missing so heading numbering can be injected)
     local numbering_xml_path = temp_dir .. '/word/numbering.xml'
     local numbering_content = read_xml(numbering_xml_path)
+    local numbering_created = false
+    if not numbering_content and pp and pp.process_numbering then
+        numbering_content = [[<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+</w:numbering>]]
+        numbering_created = true
+        log.debug('[DOCX-POST] Created minimal numbering.xml skeleton')
+    end
     if numbering_content and pp and pp.process_numbering then
         log.debug('[DOCX-POST] Calling hook: process_numbering')
         numbering_content = pp.process_numbering(numbering_content, log)
         write_xml(numbering_xml_path, numbering_content)
+
+        -- Register numbering.xml in content types and relationships if newly created
+        if numbering_created then
+            local ct_path = temp_dir .. '/[Content_Types].xml'
+            local ct_content = read_xml(ct_path)
+            if ct_content and not ct_content:match('numbering%.xml') then
+                ct_content = ct_content:gsub('</Types>',
+                    '<Override PartName="/word/numbering.xml"'
+                    .. ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>'
+                    .. '</Types>')
+                write_xml(ct_path, ct_content)
+                log.debug('[DOCX-POST] Registered numbering.xml in [Content_Types].xml')
+            end
+
+            local rels_xml_path = temp_dir .. '/word/_rels/document.xml.rels'
+            local rels_xml = read_xml(rels_xml_path)
+            if rels_xml and not rels_xml:match('numbering%.xml') then
+                rels_xml = rels_xml:gsub('</Relationships>',
+                    '<Relationship Id="rIdNumbering"'
+                    .. ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering"'
+                    .. ' Target="numbering.xml"/>'
+                    .. '</Relationships>')
+                write_xml(rels_xml_path, rels_xml)
+                log.debug('[DOCX-POST] Registered numbering.xml in document.xml.rels')
+            end
+        end
     end
 
     -- Process [Content_Types].xml (optional)
@@ -538,31 +573,32 @@ local DEFAULT_TABLE_CONFIG = {
 }
 
 -- Default heading numbering: single multilevel definition (1, 1.1, 1.1.1, etc.)
+-- Uses high IDs (100) to avoid conflicts with Pandoc's auto-generated list numbering.
 local DEFAULT_NUMBERING_DEFINITIONS = {
     {
-        abstract_num_id = "0",
+        abstract_num_id = "100",
         nsid = "A0B1C2D3",
         tmpl = "D3C2B1A0",
         name = "HeadingNumbering",
         multi_level_type = "multilevel",
-        num_id = "1",
+        num_id = "100",
         levels = {
-            { ilvl = "0", start = "1", numFmt = "decimal", lvlText = "%1", suff = "space" },
-            { ilvl = "1", start = "1", numFmt = "decimal", lvlText = "%1.%2", suff = "space" },
-            { ilvl = "2", start = "1", numFmt = "decimal", lvlText = "%1.%2.%3", suff = "space" },
-            { ilvl = "3", start = "1", numFmt = "decimal", lvlText = "%1.%2.%3.%4", suff = "space" },
-            { ilvl = "4", start = "1", numFmt = "decimal", lvlText = "%1.%2.%3.%4.%5", suff = "space" },
+            { ilvl = "0", start = "1", num_fmt = "decimal", lvl_text = "%1", suffix = "space", pstyle = "Heading1" },
+            { ilvl = "1", start = "1", num_fmt = "decimal", lvl_text = "%1.%2", suffix = "space", pstyle = "Heading2", restart_level = 0 },
+            { ilvl = "2", start = "1", num_fmt = "decimal", lvl_text = "%1.%2.%3", suffix = "space", pstyle = "Heading3", restart_level = 1 },
+            { ilvl = "3", start = "1", num_fmt = "decimal", lvl_text = "%1.%2.%3.%4", suffix = "space", pstyle = "Heading4", restart_level = 2 },
+            { ilvl = "4", start = "1", num_fmt = "decimal", lvl_text = "%1.%2.%3.%4.%5", suffix = "space", pstyle = "Heading5", restart_level = 3 },
         },
     },
 }
 
 -- Default heading → numbering map.
 local DEFAULT_HEADING_MAP = {
-    Heading1 = { ilvl = "0", numId = "1" },
-    Heading2 = { ilvl = "1", numId = "1" },
-    Heading3 = { ilvl = "2", numId = "1" },
-    Heading4 = { ilvl = "3", numId = "1" },
-    Heading5 = { ilvl = "4", numId = "1" },
+    Heading1 = { ilvl = "0", numId = "100" },
+    Heading2 = { ilvl = "1", numId = "100" },
+    Heading3 = { ilvl = "2", numId = "100" },
+    Heading4 = { ilvl = "3", numId = "100" },
+    Heading5 = { ilvl = "4", numId = "100" },
 }
 
 -- Default bibliography config.
@@ -721,6 +757,13 @@ local function fix_code_styles(content, log)
             xml.node("w:pPr", {}, {
                 xml.node("w:spacing", { ["w:before"] = "0", ["w:after"] = "0", ["w:line"] = "240", ["w:lineRule"] = "auto" }),
                 xml.node("w:jc", { ["w:val"] = "left" }),
+                xml.node("w:pBdr", {}, {
+                    xml.node("w:top",    { ["w:val"] = "single", ["w:sz"] = "4", ["w:space"] = "1", ["w:color"] = "CCCCCC" }),
+                    xml.node("w:bottom", { ["w:val"] = "single", ["w:sz"] = "4", ["w:space"] = "1", ["w:color"] = "CCCCCC" }),
+                    xml.node("w:left",   { ["w:val"] = "single", ["w:sz"] = "4", ["w:space"] = "1", ["w:color"] = "CCCCCC" }),
+                    xml.node("w:right",  { ["w:val"] = "single", ["w:sz"] = "4", ["w:space"] = "1", ["w:color"] = "CCCCCC" }),
+                }),
+                xml.node("w:shd", { ["w:val"] = "clear", ["w:color"] = "auto", ["w:fill"] = "F5F5F5" }),
             }),
             xml.node("w:rPr", {}, {
                 xml.node("w:rFonts", { ["w:ascii"] = "Courier New", ["w:hAnsi"] = "Courier New", ["w:cs"] = "Courier New" }),
@@ -737,6 +780,91 @@ local function fix_code_styles(content, log)
     return xml.serialize(doc)
 end
 
+---Inject a Word-native TOC field into document.xml before the first heading.
+---Creates a dynamic field (w:fldChar sequence) that Word/LibreOffice renders
+---on document open, rather than Pandoc's static inline TOC.
+---@param content string document.xml content
+---@param log table Logger instance
+---@return string Modified content
+local function inject_toc_field(content, log)
+    local doc = xml.parse(content)
+    if not doc or not doc.root then return content end
+
+    local body = xml.find_child(doc.root, "w:body")
+    if not body then return content end
+
+    -- Find the first heading paragraph
+    local first_heading_idx = nil
+    for i, kid in ipairs(body.kids or {}) do
+        if kid.name == "w:p" or (kid.nsPrefix and kid.nsPrefix .. ":" .. kid.name == "w:p") then
+            local pPr = xml.find_child(kid, "w:pPr")
+            if pPr then
+                local pStyle = xml.find_child(pPr, "w:pStyle")
+                if pStyle then
+                    local val = xml.get_attr(pStyle, "w:val")
+                    if val and val:match("^Heading%d$") then
+                        first_heading_idx = i
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    if not first_heading_idx then
+        log.debug("[DEFAULT-TOC] No heading paragraphs found, skipping TOC injection")
+        return content
+    end
+
+    -- TOC heading paragraph
+    local toc_heading = xml.node("w:p", {}, {
+        xml.node("w:pPr", {}, {
+            xml.node("w:pStyle", { ["w:val"] = "TOCHeading" }),
+        }),
+        xml.node("w:r", {}, {
+            xml.node("w:t", {}, { xml.text("Table of Contents") }),
+        }),
+    })
+
+    -- TOC field: begin + instrText + separate
+    local toc_field_start = xml.node("w:p", {}, {
+        xml.node("w:r", {}, {
+            xml.node("w:fldChar", { ["w:fldCharType"] = "begin" }),
+        }),
+        xml.node("w:r", {}, {
+            xml.node("w:instrText", { ["xml:space"] = "preserve" }, {
+                xml.text(' TOC \\o "1-3" \\h '),
+            }),
+        }),
+        xml.node("w:r", {}, {
+            xml.node("w:fldChar", { ["w:fldCharType"] = "separate" }),
+        }),
+    })
+
+    -- TOC field end
+    local toc_field_end = xml.node("w:p", {}, {
+        xml.node("w:r", {}, {
+            xml.node("w:fldChar", { ["w:fldCharType"] = "end" }),
+        }),
+    })
+
+    -- Page break after TOC
+    local page_break = xml.node("w:p", {}, {
+        xml.node("w:r", {}, {
+            xml.node("w:br", { ["w:type"] = "page" }),
+        }),
+    })
+
+    -- Insert before first heading (in reverse order so indices stay correct)
+    xml.insert_child(body, page_break, first_heading_idx)
+    xml.insert_child(body, toc_field_end, first_heading_idx)
+    xml.insert_child(body, toc_field_start, first_heading_idx)
+    xml.insert_child(body, toc_heading, first_heading_idx)
+
+    log.debug("[DEFAULT-TOC] Injected TOC field before first heading")
+    return xml.serialize(doc)
+end
+
 ---Process document.xml for default template.
 ---@param content string document.xml content
 ---@param config table Configuration
@@ -746,6 +874,7 @@ function M.process_document(content, config, log)
     content = table_formatter.format_tables(content, DEFAULT_TABLE_CONFIG, log)
     content = fix_figures(content, log)
     content = heading_numberer.apply_numbering(content, DEFAULT_HEADING_MAP, log)
+    content = inject_toc_field(content, log)
     content = bibliography_formatter.format_bibliography(content, DEFAULT_BIB_CONFIG, log)
     content = header_builder.inject_section_references(content, DEFAULT_SECTION_REFS, log)
     return content
@@ -807,6 +936,60 @@ local function merge_reference_styles(content, log, config)
     return xml.serialize(doc)
 end
 
+---Fix heading styles in styles.xml.
+---Pandoc regenerates heading styles with its own defaults (blue/teal color),
+---overriding the preset values from reference.docx. This function forces
+---black font color and adds pageBreakBefore to Heading1.
+---@param content string styles.xml content
+---@param log table Logger instance
+---@return string Modified content
+local function fix_heading_styles(content, log)
+    local doc = xml.parse(content)
+    if not doc or not doc.root then return content end
+
+    local styles_root = doc.root
+    if styles_root.name ~= "w:styles" then
+        styles_root = xml.find_child(doc.root, "w:styles") or doc.root
+    end
+
+    local heading_ids = { Heading1 = true, Heading2 = true, Heading3 = true,
+                          Heading4 = true, Heading5 = true }
+    local fixed = 0
+
+    for _, style_el in ipairs(xml.find_children(styles_root, "w:style")) do
+        local sid = xml.get_attr(style_el, "w:styleId")
+        if sid and heading_ids[sid] then
+            -- Force black font color in rPr
+            local rPr = xml.find_child(style_el, "w:rPr")
+            if not rPr then
+                rPr = xml.node("w:rPr")
+                xml.add_child(style_el, rPr)
+            end
+            local color = xml.find_child(rPr, "w:color")
+            if color then
+                xml.set_attr(color, "w:val", "000000")
+            else
+                xml.add_child(rPr, xml.node("w:color", { ["w:val"] = "000000" }))
+            end
+            fixed = fixed + 1
+
+            -- Heading1: ensure pageBreakBefore
+            if sid == "Heading1" then
+                local pPr = xml.find_child(style_el, "w:pPr")
+                if pPr and not xml.find_child(pPr, "w:pageBreakBefore") then
+                    xml.add_child(pPr, xml.node("w:pageBreakBefore"))
+                    log.debug("[DEFAULT-STYLES] Added pageBreakBefore to Heading1")
+                end
+            end
+        end
+    end
+
+    if fixed > 0 then
+        log.debug("[DEFAULT-STYLES] Fixed font color to black on %d heading style(s)", fixed)
+    end
+    return xml.serialize(doc)
+end
+
 ---Process styles.xml for default template.
 ---@param content string styles.xml content
 ---@param log table Logger instance
@@ -815,6 +998,7 @@ end
 function M.process_styles(content, log, config)
     content = remove_duplicate_custom_styles(content, log)
     content = fix_code_styles(content, log)
+    content = fix_heading_styles(content, log)
     content = merge_reference_styles(content, log, config)
     return content
 end

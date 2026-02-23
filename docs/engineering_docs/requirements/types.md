@@ -2,7 +2,7 @@
 
 ### SF: Type System @SF-003
 
-Dynamic type system providing typed containers for [specIR-01](@), [specIR-02](@), [specIR-03](@), [DIC-VW-001](@), [DIC-REL-001](@), and [DIC-ATTR-001](@).
+Dynamic type system providing typed containers for [specIR-01](@), [specIR-02](@), [specIR-03](@), [specIR-06](@), [specIR-05](@), and [specIR-04](@).
 
 > description: Groups requirements for the six core containers that store parsed specification
 > data plus the proof-view validation framework.

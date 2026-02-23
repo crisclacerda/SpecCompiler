@@ -35,7 +35,7 @@ jobs:
           # Fallback to listing all files if there is no prior commit (first push)
           CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-tree --name-only -r HEAD)
           if echo "$CHANGED" | grep -qE \
-            '^(Dockerfile|scripts/versions\.env|scripts/build_vendor\.sh|src/tools/amath/|src/tools/echarts-render\.ts|src/tools/mml2omml\.ts)'; then
+            '^(Dockerfile|scripts/versions\.env|scripts/build\.sh|src/tools/amath/|src/tools/echarts-render\.ts|src/tools/mml2omml\.ts)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
@@ -207,11 +207,11 @@ jobs:
             ## Quick Install
 
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/remote_install.sh | bash
             ```
 
             Or clone and build locally (includes toolchain compilation):
             ```bash
             git clone https://github.com/${{ github.repository }}.git
-            bash SpecCompiler/scripts/docker_install.sh
+            bash SpecCompiler/scripts/install.sh
             ```

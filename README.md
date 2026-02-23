@@ -37,9 +37,9 @@ The fundamental purpose of SpecCompiler is to prevent the occurrence of *finding
 
 **HTML + WASM (Web Native):** A self-contained html file bundled with SQLite.js enables queries directly in the browser without any server infrastructure.
 
-**ReqIF (Downstream Interoperability):** Author and validate your specs in Git but emit industry-standard ReqIF to integrate with legacy RE tools.
+**ReqIF (Interoperability):** Author and validate your specs in Git but emit industry-standard ReqIF to integrate with legacy RE tools.
 
-**Actually, Anything:** The entire pipeline is easily extensible to support custom Lua filters and post-processing hooks for any Pandoc supported format.
+**Anything (that Pandoc supports):** The pipeline is extensible via custom Lua filters and post-processing hooks for any format Pandoc can target.
 
 ## Quickstart
 
@@ -52,12 +52,12 @@ cd speccompiler
 
 Docker is recommended. (Linux/Mac/WSL2)
 ```bash
-bash scripts/docker_install.sh
+bash scripts/install.sh
 ```
 
 For native ubuntu/debian (builds all dependencies from source).
 ```bash
-bash scripts/build_vendor.sh --install
+bash scripts/build.sh --install
 ```
 
 Build the docs.
@@ -174,9 +174,7 @@ VERIFIES relation.
 
 **3. Backend (Pandoc writer).** Render the assembled AST via the Pandoc CLI.
 
-**4. Post-processing (optional).** Format-specific adjustments to the emitted
-artifacts. For example, OOXML tweaks in DOCX output or packaging sqlite.js
-in HTML.
+**4. Post-processing (optional).** Format-specific adjustments to the emitted artifacts. For example, OOXML tweaks in DOCX output or packaging sqlite.js in HTML.
 
 ## License
 

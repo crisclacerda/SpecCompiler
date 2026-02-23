@@ -385,15 +385,18 @@ function M.run_project(project_info)
     -- Execute pipeline with all document walkers
     pipeline:execute(walkers, { cached_spec_ids = cached_spec_ids })
 
-    -- Apply deferred cache updates AFTER successful pipeline execution.
-    -- If any document errored during the loop above, we never reach here,
-    -- so no stale cache entries are written for partially-processed docs.
-    for _, update in ipairs(pending_cache_updates) do
-        cache:update_document_hash(update.file_path, update.hash)
-        cache:update_build_graph(update.file_path, update.includes)
-        -- Track includes in build graph (for compute_include_hashes on next build)
-        for _, inc in ipairs(update.includes) do
-            include_handler.track_include(data, update.file_path, inc.path, inc.hash)
+    -- Apply deferred cache updates ONLY after successful verification.
+    -- If verification found errors, don't update hashes — this forces
+    -- re-processing on the next build so cross-doc relations get a fresh
+    -- chance to resolve (prevents cache poisoning from partial builds).
+    if not diag:has_errors() then
+        for _, update in ipairs(pending_cache_updates) do
+            cache:update_document_hash(update.file_path, update.hash)
+            cache:update_build_graph(update.file_path, update.includes)
+            -- Track includes in build graph (for compute_include_hashes on next build)
+            for _, inc in ipairs(update.includes) do
+                include_handler.track_include(data, update.file_path, inc.path, inc.hash)
+            end
         end
     end
 

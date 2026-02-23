@@ -14,8 +14,8 @@ caching.
 **SQLite Persistence**: The data manager ([CSU-012](@)) wraps all database operations,
 providing a query API over the Spec-IR schema. The database file is created in the
 project's output directory and persists across builds. Schema creation is executed inside
-`DataManager.new()`, establishing all content and type tables. WAL mode is enabled for
-concurrent read performance.
+`DataManager.new()`, establishing all content and type tables. DELETE journal mode is used
+for reliable single-file database operation (see [DD-DB-001](@)).
 
 **Spec-IR Schema**: The content schema ([CSU-013](@)) defines the core entity tables:
 
@@ -57,8 +57,8 @@ The storage subsystem is realized through four packages that separate runtime
 operations from static definitions.
 
 [csc:database-persistence](#) (Database Persistence) provides the runtime database layer. [csu:database-handler](#)
-(Database Handler) wraps raw SQLite operations and connection management, enabling WAL mode
-for concurrent reads. [csu:data-manager](#) (Data Manager) builds on the handler to provide the
+(Database Handler) wraps raw SQLite operations and connection management with DELETE journal
+mode for single-file reliability. [csu:data-manager](#) (Data Manager) builds on the handler to provide the
 high-level query API used by all pipeline phases — inserting spec entities during INITIALIZE,
 updating references during ANALYZE, and reading assembled content during EMIT. [csu:build-cache](#)
 (Build Cache) queries `source_files` and `build_graph` to detect changed documents via SHA1
@@ -92,27 +92,40 @@ skinparam sequenceMessageAlign center
 
 participant "CSU Build Engine" as E
 participant "CSU Data Manager" as DB
+participant "CSC-006 DB Schema" as SCH
+participant "CSC-007 DB Views" as VW
+participant "CSC-005 DB Queries" as QRY
 participant "SQLite" as SQL
 
 == Schema Initialization ==
-E -> DB: new(db_handler, log)
-DB -> SQL: CREATE TABLE specifications
-DB -> SQL: CREATE TABLE spec_objects
-DB -> SQL: CREATE TABLE spec_floats
-DB -> SQL: CREATE TABLE spec_views
-DB -> SQL: CREATE TABLE spec_relations
-DB -> SQL: CREATE TABLE spec_attribute_values
-DB -> SQL: CREATE TABLE source_files
-DB -> SQL: CREATE TABLE build_graph
+E -> DB: DataManager.new(db_handler, log)
+DB -> SCH: require Schema
+SCH -> SCH: compose content.SQL\n+ types.SQL + build.SQL\n+ search.SQL
+DB -> SQL: exec_sql(Schema.SQL)
+note right: Creates all tables:\nspecifications, spec_objects,\nspec_floats, spec_views,\nspec_relations, spec_attribute_values,\nsource_files, build_graph,\nspec_*_types, spec_attribute_defs
+
+== View Initialization ==
+E -> VW: initialize_views(data)
+VW -> SQL: CREATE VIEW (resolution views)
+VW -> SQL: CREATE VIEW (public API views)
+VW -> QRY: query spec_object_types
+QRY --> VW: type definitions[]
+loop for each non-composite object type
+    VW -> VW: generate EAV pivot SQL
+    VW -> SQL: CREATE VIEW view_{type}_objects
+end
 
 == Build Cache Check ==
 E -> E: sha1(document_content)
 E -> DB: query source_files(path)
-DB --> E: cached_hash
+DB -> QRY: build.document_hash_check
+QRY -> SQL: SELECT sha1 FROM source_files
+SQL --> E: cached_hash
 
 alt hash matches
     E -> DB: query build_graph(root_path)
-    DB --> E: includes[]
+    DB -> QRY: build.include_dependencies
+    QRY --> E: includes[]
     E -> E: verify include hashes
     alt all match
         E -> E: skip parsing (use cached IR)
@@ -130,6 +143,7 @@ E -> DB: UPDATE build_graph entries
 
 == Output Cache ==
 E -> DB: query output_cache(spec_id, format)
+DB -> QRY: build.output_cache_check
 alt output current
     E -> E: skip generation
 else stale
@@ -138,3 +152,48 @@ else stale
 end
 @enduml
 ```
+
+---
+
+### DD: Content-Addressed Build Caching @DD-CORE-007
+
+Selected SHA1 content hashing for incremental build detection.
+
+> rationale: Content-addressed hashing provides deterministic cache invalidation:
+>
+> - SHA1 of document content detects actual changes, ignoring timestamp-only modifications
+> - Include dependency tracking via `build_graph` table ensures changes to included files trigger rebuilds
+> - Missing include files force cache miss (hash returns nil), preventing stale IR state
+> - Deferred cache updates (after successful pipeline execution) prevent stale entries on error
+> - Output cache tracks generated files independently, enabling incremental output generation
+> - Uses Pandoc's built-in `pandoc.sha1()` when available, falling back to `vendor/sha2.lua` in standalone mode
+> - Alternative of file timestamps rejected: unreliable across platforms (git checkout, copy, WSL2 clock skew)
+
+---
+
+### DD: DELETE Journal Mode for Single-Process Builds @DD-DB-001
+
+Selected DELETE journal mode for SQLite database operations.
+
+> rationale: DELETE journal mode avoids file management issues:
+>
+> - SpecCompiler is single-process, so WAL's concurrent-read benefit is unused
+> - DELETE mode avoids WAL and SHM sidecar files that cause issues on WSL2
+> - Simpler file management: database is a single file (specir.db) without auxiliary files
+> - Sufficient performance for single-threaded sequential pipeline execution
+> - Transactions (BEGIN/COMMIT) batch INSERTs for bulk performance improvement
+
+---
+
+### DD: Dynamic SQL View Generation for EAV Pivots @DD-DB-002
+
+Selected runtime-generated CREATE VIEW statements per object type to pivot EAV attributes into typed columns.
+
+> rationale: Dynamic view generation bridges EAV flexibility with query usability:
+>
+> - Views generated after type loading, when attribute definitions are known
+> - One view per non-composite object type (view_{type}_objects) with type-appropriate MAX(CASE) pivot expressions
+> - Datatype-aware column selection (string_value for STRING, int_value for INTEGER, etc.)
+> - External tools query familiar columnar views instead of raw EAV tables
+> - Three-stage view initialization: resolution views first, public API views second, EAV pivots last
+> - Alternative of application-layer pivoting rejected: pushes N+1 query patterns to every consumer

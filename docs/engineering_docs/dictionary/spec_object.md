@@ -2,7 +2,7 @@
 
 A **Spec Object** represents a traceable element in a specification document, created from H2-H6 headers. Objects can be requirements (HLR, LLR), non-functional requirements (NFR), or structural sections (SECTION). Each object has a type, PID and can contain attributes and body content.
 
-#### Definition
+#### Declaration
 
 A **Spec Object** is formally defined as a tuple `$: O = (tau, "title", "pid", beta, cc A, cc F, cc R, cc V, cc O)` where:
 - `$: tau in Gamma . TT_O` is the object type (e.g., HLR, NFR, SECTION).
@@ -15,7 +15,7 @@ A **Spec Object** is formally defined as a tuple `$: O = (tau, "title", "pid", b
 - `$: cc V sube "SpecViews"` is the set of child views contained in this object.
 - `$: cc O sube "SpecObject"` is the set of child objects contained in this object.
 
-#### Grammar
+#### Syntax
 
 
 ```plantuml:grammar-spec-object{caption="Spec Object productions"}

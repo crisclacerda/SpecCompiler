@@ -158,3 +158,18 @@ TL --> E: types and handlers registered
 deactivate TL
 @enduml
 ```
+
+---
+
+### DD: Lua-Based Type System with Inheritance @DD-CORE-006
+
+Selected Lua modules with `extends` chains for type definitions.
+
+> rationale: Lua modules as type definitions enable:
+>
+> - Type definitions are executable code, supporting computed defaults and complex attribute constraints
+> - `extends` field enables single-inheritance (e.g., HLR extends TRACEABLE) with automatic attribute propagation
+> - Module exports (M.object, M.float, M.handler) co-locate type definition with optional handler registration
+> - `require()` loading reuses Pandoc's built-in Lua module system without additional dependency
+> - Layered model loading (default first, then domain model) with ID-based override enables extension without forking the default model
+> - Alternative of YAML/JSON config rejected: no computed defaults, no handler co-location

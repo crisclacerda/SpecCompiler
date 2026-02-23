@@ -151,7 +151,7 @@ All dependency versions are pinned in `scripts/versions.env`. The Docker image b
 Run the Docker installer from the repository root:
 
 ```src.bash:src-build-image{caption="Build and install via Docker"}
-bash scripts/docker_install.sh
+bash scripts/install.sh
 ```
 
 This performs three steps:
@@ -1182,7 +1182,7 @@ SPECCOMPILER_LOG_LEVEL=DEBUG specc build
 ## Known Limitations
 
 - **No interactive validation** -- Batch mode only, no LSP or watch mode.
-- **Docker-only distribution** -- Native install requires replicating the full build environment (`scripts/build_vendor.sh --install` is provided but requires all system dependencies).
+- **Docker-only distribution** -- Native install requires replicating the full build environment (`scripts/build.sh --install` is provided but requires all system dependencies).
 - **Single-writer SQLite** -- Concurrent builds cause locking errors; use separate output directories.
 - **Float labels per-specification** -- Same label can exist across specs; use scoped syntax for cross-spec references.
 - **PID case sensitivity** -- `[hlr-001](@)` will not match `@HLR-001`.
