@@ -11,6 +11,7 @@
 ---  - Converts RawBlock("speccompiler", "math-omml:OMML") to OOXML math
 ---  - Converts speccompiler-caption Div to OOXML caption with SEQ field
 ---  - Converts speccompiler-numbered-equation Div to OOXML numbered equation
+---  - Converts speccompiler-toc Div to native Word TOC field
 ---  - Converts RawInline("speccompiler", "view:NAME:CONTENT") to OOXML inline
 ---
 ---@usage pandoc --lua-filter=docx.lua -f json -t docx input.json -o output.docx
@@ -445,6 +446,44 @@ local function convert_table_div(div)
     return div.content
 end
 
+---Convert speccompiler-toc Div to native Word TOC field.
+---Generates a dynamic TOC field that Word/LibreOffice renders on document open.
+---@param div pandoc.Div The TOC div (from toc.lua view)
+---@param heading_text string|nil Text from the preceding heading (if any)
+---@return table Array of RawBlock elements
+local function convert_toc_div(div, heading_text)
+    local depth = get_attr(div, "data-depth") or "3"
+    local instr = string.format(' TOC \\o "1-%s" ', depth)
+
+    local result = {}
+
+    -- If a preceding heading was captured, emit it with TOCHeading style
+    -- (unnumbered: heading_numberer only processes Heading1-5)
+    if heading_text then
+        table.insert(result,
+            pandoc.RawBlock("openxml", ooxml_styled_para(heading_text, "TOCHeading")))
+    end
+
+    -- TOC field start paragraph (begin + instrText + separate)
+    local field_start = xml.serialize_element(xml.node("w:p", {}, {
+        xml.node("w:r", {}, {xml.node("w:fldChar", {["w:fldCharType"] = "begin"})}),
+        xml.node("w:r", {}, {xml.node("w:instrText", {["xml:space"] = "preserve"}, {xml.text(instr)})}),
+        xml.node("w:r", {}, {xml.node("w:fldChar", {["w:fldCharType"] = "separate"})}),
+    }))
+    table.insert(result, pandoc.RawBlock("openxml", field_start))
+
+    -- TOC field end paragraph
+    local field_end = xml.serialize_element(xml.node("w:p", {}, {
+        xml.node("w:r", {}, {xml.node("w:fldChar", {["w:fldCharType"] = "end"})}),
+    }))
+    table.insert(result, pandoc.RawBlock("openxml", field_end))
+
+    -- Page break after TOC
+    table.insert(result, pandoc.RawBlock("openxml", ooxml_page_break()))
+
+    return result
+end
+
 ---Convert speccompiler-positioned-float Div.
 ---Wraps content with position markers for postprocessor to convert to anchored OOXML.
 ---@param div pandoc.Div The positioned float div
@@ -510,7 +549,44 @@ end
 -- Equation and caption Divs inspect inner speccompiler RawBlocks;
 -- bottom-up traversal in a single pass would convert those RawBlocks
 -- before the Div handler sees them, breaking extraction.
+-- Also uses Blocks handler to detect Header + speccompiler-toc Div pairs
+-- so the heading can be converted to unnumbered TOCHeading style.
 local FILTER_PASS1 = {
+    Blocks = function(blocks)
+        local new_blocks = {}
+        local i = 1
+        while i <= #blocks do
+            local block = blocks[i]
+            -- Check for Header followed by speccompiler-toc Div
+            if block.t == "Header" and i < #blocks then
+                local next_block = blocks[i + 1]
+                if next_block.t == "Div" and has_class(next_block, "speccompiler-toc") then
+                    -- Capture heading text, convert TOC Div with it
+                    local heading_text = pandoc.utils.stringify(block.content)
+                    local toc_blocks = convert_toc_div(next_block, heading_text)
+                    for _, b in ipairs(toc_blocks) do
+                        table.insert(new_blocks, b)
+                    end
+                    i = i + 2  -- Skip both Header and TOC Div
+                    goto continue
+                end
+            end
+            -- Standalone speccompiler-toc Div (no preceding header)
+            if block.t == "Div" and has_class(block, "speccompiler-toc") then
+                local toc_blocks = convert_toc_div(block, nil)
+                for _, b in ipairs(toc_blocks) do
+                    table.insert(new_blocks, b)
+                end
+                i = i + 1
+                goto continue
+            end
+            table.insert(new_blocks, block)
+            i = i + 1
+            ::continue::
+        end
+        return pandoc.Blocks(new_blocks)
+    end,
+
     Div = function(div)
         if has_class(div, "speccompiler-caption") then
             return convert_caption_div(div)

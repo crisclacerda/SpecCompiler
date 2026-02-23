@@ -342,6 +342,32 @@ return {
     -- Cover-section markers (RawBlocks) are also handled here so that
     -- the state flag is set before cover Divs are visited.
     {
+        -- Strip Header + speccompiler-toc Div pairs from HTML output
+        Blocks = function(blocks)
+            local new_blocks = {}
+            local i = 1
+            while i <= #blocks do
+                local block = blocks[i]
+                -- Check for Header followed by speccompiler-toc Div
+                if block.t == "Header" and i < #blocks then
+                    local next_block = blocks[i + 1]
+                    if next_block.t == "Div" and has_class(next_block, "speccompiler-toc") then
+                        i = i + 2  -- Skip both Header and TOC Div
+                        goto continue
+                    end
+                end
+                -- Standalone speccompiler-toc Div (no preceding header)
+                if block.t == "Div" and has_class(block, "speccompiler-toc") then
+                    i = i + 1
+                    goto continue
+                end
+                table.insert(new_blocks, block)
+                i = i + 1
+                ::continue::
+            end
+            return pandoc.Blocks(new_blocks)
+        end,
+
         RawBlock = function(block)
             if block.format == "speccompiler" then
                 if block.text == "cover-section-start" then

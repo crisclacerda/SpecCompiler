@@ -12,14 +12,14 @@ The Specification [TERM-IR](@) (SPEC-IR) is implemented as a [TERM-SQLITE](@) sc
 
 The schema has four domains:
 
-```list-table:tbl-specir-domains{caption="Schema domains"}
+```list-table:tbl-specIR-domains{caption="Schema domains"}
 > header-rows: 1
 > aligns: l,l
 
 * - Domain
   - Tables
 * - Type system
-  - `spec_specification_types`, `spec_object_types`, `spec_float_types`, `spec_relation_types`, `spec_view_types`, `datatype_definitions`, `spec_attribute_types`, `enum_values`, `implicit_type_aliases`, `implicit_spec_type_aliases`
+  - `spec_specification_types`, `spec_object_types`, `spec_float_types`, `spec_relation_types`, `spec_view_types`, `datatype_definitions`, `spec_attribute_types`, `enum_values`
 * - Content
   - `specifications`, `spec_objects`, `spec_floats`, `spec_relations`, `spec_views`, `spec_attribute_values`
 * - Build cache
@@ -28,9 +28,15 @@ The schema has four domains:
   - `fts_objects`, `fts_attributes`, `fts_floats`
 ```
 
-### ER-001: Type + Content
+### Type + Content (specIR)
 
-```plantuml:er-specir-core
+specIR is a ReqIF inspired relational metamodel that lowers textual specifications into a typed intermediate representation against which structural validity is evaluated.
+
+Where Pandoc provides the syntactic bridge from Markdown to a structured AST, specIR provides the semantic layer by separating: a type layer (Γ), which defines what may exist and a content layer, which records what does exist.
+
+Validation reduces to relational set operations: constraints are expressed as queries over finite sets of entities and relations, and violations emerge as counterexamples (e.g., anti-joins between expected and actual structures).
+
+```plantuml:er-specIR-core
 @startuml
 title SPEC-IR ER (Core Types + Content)
 
@@ -228,17 +234,6 @@ entity "spec_attribute_values" as spec_attribute_values {
   xhtml_value : TEXT
 }
 
-entity "implicit_type_aliases" as implicit_type_aliases {
-  * alias : TEXT
-  --
-  object_type_id : TEXT
-}
-
-entity "implicit_spec_type_aliases" as implicit_spec_type_aliases {
-  * alias : TEXT
-  --
-  spec_type_id : TEXT
-}
 
 specifications }o--|| spec_specification_types : type_ref
 spec_objects }o--|| specifications : specification_ref
@@ -260,8 +255,6 @@ spec_attribute_values }o--o| enum_values : enum_ref
 spec_attribute_types }o--|| spec_object_types : owner_type_ref
 spec_attribute_types }o--|| datatype_definitions : datatype_ref
 enum_values }o--|| datatype_definitions : datatype_ref
-implicit_type_aliases }o--|| spec_object_types : object_type_id
-implicit_spec_type_aliases }o--|| spec_specification_types : spec_type_id
 spec_relation_types }o--o| spec_object_types : source_type_ref
 spec_relation_types }o--o| spec_object_types : target_type_ref
 

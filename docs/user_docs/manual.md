@@ -18,6 +18,8 @@
 
 This manual is itself a complete working example of a SpecCompiler document authored with `template: default`. Every feature described in these pages -- floats, cross-references, abbreviations, charts, diagrams, views, and math -- is also demonstrated inline. Process this file with `specc build` to see the rendered output. The companion guides *Creating a Custom Model* and *DOCX Customization* are included in the same project and can be cross-referenced by section label.
 
+## INDEX
+
 `toc:`
 
 ## Introduction
@@ -1186,24 +1188,6 @@ SPECCOMPILER_LOG_LEVEL=DEBUG specc build
 - **Single-writer SQLite** -- Concurrent builds cause locking errors; use separate output directories.
 - **Float labels per-specification** -- Same label can exist across specs; use scoped syntax for cross-spec references.
 - **PID case sensitivity** -- `[hlr-001](@)` will not match `@HLR-001`.
-
-## Glossary
-
-| Term | Definition |
-|------|------------|
-| **AST** | Abstract Syntax Tree - Pandoc's internal document representation |
-| **EAV** | Entity-Attribute-Value - Database pattern for flexible attributes |
-| **Float** | Numbered element (figure, table, diagram) that can be cross-referenced |
-| **Handler** | Pipeline component that processes documents in a specific phase |
-| **HLR** | High-Level Requirement |
-| **PID** | Project Identifier - Unique ID for objects (e.g., `@REQ-001`) |
-| **Proof View** | SQL query that validates data integrity |
-| **SPEC-IR** | Specification Intermediate Representation - SQLite database schema |
-| **Specification** | Root document container (one per .md file) |
-| **Spec Object** | Individual item within a specification (requirement, test, section) |
-| **Type** | Category definition for objects, floats, relations, or views |
-| **VC** | Verification Case |
-| **View** | Generated content block (TOC, LOF, abbreviation list) |
 
 ## List of Figures
 

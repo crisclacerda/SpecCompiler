@@ -5,10 +5,15 @@
 ---  `toc:`           - Full TOC with default settings
 ---  `toc: depth=2`   - TOC limited to depth 2
 ---
+---Generates a speccompiler-toc Div wrapping a BulletList.
+---Format-specific filters handle the Div:
+---  - DOCX filter: Converts to native Word TOC field, marks preceding heading unnumbered
+---  - HTML filter: Strips entirely (not needed in HTML output)
+---
 ---Uses the unified INITIALIZE -> TRANSFORM -> EMIT pattern:
 ---  - INITIALIZE: Not needed (queries spec_objects at emit time)
 ---  - TRANSFORM: Not needed (queries spec_objects at emit time)
----  - EMIT: Query spec_objects, return Pandoc BulletList
+---  - EMIT: Query spec_objects, return Pandoc Div with BulletList
 ---
 ---@module toc
 local M = {}
@@ -108,6 +113,9 @@ M.handler = {
     end,
 
     ---EMIT: Render CodeBlock elements with toc class.
+    ---Wraps output in a speccompiler-toc Div so format-specific filters
+    ---(e.g., DOCX) can convert it to a native TOC field.
+    ---The BulletList inside serves as fallback for formats without special handling.
     ---@param block table Pandoc CodeBlock element
     ---@param ctx Context
     ---@return table|nil Replacement block
@@ -128,7 +136,7 @@ M.handler = {
             return pandoc.Para{pandoc.Str("[No entries for TOC]")}
         end
 
-        -- Build Pandoc BulletList
+        -- Build Pandoc BulletList (fallback for non-DOCX formats)
         local items = {}
         for _, entry in ipairs(entries) do
             local text = entry.title
@@ -139,7 +147,12 @@ M.handler = {
             table.insert(items, {pandoc.Plain{link}})
         end
 
-        return pandoc.BulletList(items)
+        -- Wrap in Div for format-specific handling by filters
+        local depth = params.depth or 3
+        return pandoc.Div(
+            {pandoc.BulletList(items)},
+            pandoc.Attr("", {"speccompiler-toc"}, {["data-depth"] = tostring(depth)})
+        )
     end
 }
 

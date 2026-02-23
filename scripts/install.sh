@@ -68,6 +68,8 @@ if [ "$CODE_ONLY" = true ]; then
         --target codeonly \
         "$REPO_DIR"
     echo "  Code-only update complete"
+    # Clean up dangling images left by the replaced tag
+    docker image prune -f --filter "label!=keep" > /dev/null 2>&1 || true
 elif [ "$FORCE" = false ] && docker image inspect "${IMAGE_NAME}:${IMAGE_TAG}" &> /dev/null; then
     echo "  Image exists, use --force to rebuild or --code-only to update Lua code"
 else
@@ -97,6 +99,8 @@ else
         --target runtime \
         "$REPO_DIR"
     echo "  Image built"
+    # Clean up dangling images left by replaced tags
+    docker image prune -f --filter "label!=keep" > /dev/null 2>&1 || true
 fi
 
 # Create Docker wrapper script

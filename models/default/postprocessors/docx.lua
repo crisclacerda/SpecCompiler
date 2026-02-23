@@ -874,7 +874,7 @@ function M.process_document(content, config, log)
     content = table_formatter.format_tables(content, DEFAULT_TABLE_CONFIG, log)
     content = fix_figures(content, log)
     content = heading_numberer.apply_numbering(content, DEFAULT_HEADING_MAP, log)
-    content = inject_toc_field(content, log)
+    -- TOC is now handled by the toc: view + DOCX filter (speccompiler-toc Div)
     content = bibliography_formatter.format_bibliography(content, DEFAULT_BIB_CONFIG, log)
     content = header_builder.inject_section_references(content, DEFAULT_SECTION_REFS, log)
     return content
